@@ -142,25 +142,18 @@ namespace simplicity
 				return;
 			}
 
-			unsigned int index = 0;
-			while (index < packet.length)
+			unsigned short subject = 0;
+			memcpy(&subject, packet.data, sizeof(unsigned short));
+
+			Codec* codec = Messages::getCodec(subject);
+			if (codec == nullptr)
 			{
-				unsigned short subject = 0;
-				memcpy(&subject, &packet.data[index], sizeof(unsigned short));
-				index += sizeof(unsigned short);
-
-				Codec* codec = Messages::getDeliveryOptions(subject).codec;
-				if (codec == nullptr)
-				{
-					Logs::log(Category::ERROR_LOG, "Cannot receive message: Codec not found for subject %i", subject);
-					continue;
-				}
-
-				void* message = codec->decode(reinterpret_cast<byte*>(&packet.data[index]));
-				index += codec->getDecodeReadLength();
-
-				send(subject, message);
+				Logs::log(Category::ERROR_LOG, "Cannot receive message: Codec not found for subject %i", subject);
+				return;
 			}
+
+			void* message = codec->decode(reinterpret_cast<byte*>(&packet.data[sizeof(unsigned short)]));
+			Messages::send(subject, message);
 		}
 
 		void RakNetMessagingEngine::registerRecipient(unsigned short /* subject */,
@@ -181,21 +174,25 @@ namespace simplicity
 				return;
 			}
 
-			Codec* codec = Messages::getDeliveryOptions(subject).codec;
+			Codec* codec = Messages::getCodec(subject);
 			if (codec == nullptr)
 			{
 				Logs::log(Category::ERROR_LOG, "Cannot send message: Codec not found for subject %i", subject);
 				return;
 			}
 
-			vector<byte> encodedMessage = codec->encode(subject, message);
+			vector<byte> encodedMessage = codec->encode(message);
+			vector<byte> encodedMessageWithSubject(sizeof(unsigned short));
+			memcpy(encodedMessageWithSubject.data(), &subject, sizeof(unsigned short));
+			encodedMessageWithSubject.insert(encodedMessageWithSubject.begin() + sizeof(unsigned short),
+				encodedMessage.begin(), encodedMessage.end());
 
 			for (unsigned short subjectRecipient : subjectRecipients->second)
 			{
-				if (subjectRecipient == RecipientCategory::CLIENT && subjectRecipient == RecipientCategory::SERVER)
+				if (subjectRecipient == RecipientCategory::CLIENT || subjectRecipient == RecipientCategory::SERVER)
 				{
-					peer->Send(encodedMessage.data(), encodedMessage.size(), HIGH_PRIORITY, RELIABLE, 0,
-						UNASSIGNED_RAKNET_GUID, true);
+					peer->Send(encodedMessageWithSubject.data(), encodedMessageWithSubject.size(), HIGH_PRIORITY,
+						RELIABLE, 0, UNASSIGNED_RAKNET_GUID, true);
 				}
 			}
 		}

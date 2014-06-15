@@ -1,0 +1,20 @@
+# Eclipse
+#########################
+*.metadata
+*.settings
+
+# Visual Studio
+#########################
+*.filters
+*.user
+
+# Output
+#########################
+Debug*/
+Release*/
+
+# RakNet Source
+#########################
+simplicity-raknet/src/raknet/**/*.cpp
+simplicity-raknet/src/raknet/**/*.h
+

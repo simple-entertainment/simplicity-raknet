@@ -18,6 +18,8 @@
 
 #include <simplicity/logging/Logs.h>
 #include <simplicity/messaging/Messages.h>
+#include <simplicity/messaging/Subject.h>
+#include <simplicity/Simplicity.h>
 
 #include "RakNetMessagingEngine.h"
 
@@ -34,7 +36,8 @@ namespace simplicity
 			port(listenPort),
 			recipients(),
 			role(Role::SERVER),
-			serverAddress()
+			serverAddress(),
+			systemIds()
 		{
 		}
 
@@ -44,7 +47,8 @@ namespace simplicity
 			port(serverPort),
 			recipients(),
 			role(Role::CLIENT),
-			serverAddress(serverAddress)
+			serverAddress(serverAddress),
+			systemIds()
 		{
 		}
 
@@ -99,6 +103,8 @@ namespace simplicity
 				Logs::log(Category::INFO_LOG, "RakNet client connecting to server at %s|%i", serverAddress.c_str(), port);
 				peer->Connect(serverAddress.c_str(), port, nullptr, 0);
 			}
+
+			Simplicity::setId(RakNetGUID::ToUint32(peer->GetGuidFromSystemAddress(UNASSIGNED_SYSTEM_ADDRESS)));
 		}
 
 		void RakNetMessagingEngine::onStop()
@@ -125,8 +131,16 @@ namespace simplicity
 
 			if (packetType == ID_CONNECTION_LOST)
 			{
-				Logs::log(Category::INFO_LOG, "A client at %s has lost its connection to the RakNet server",
-					packet.systemAddress.ToString());
+				if (role == Role::CLIENT)
+				{
+					Logs::log(Category::INFO_LOG, "RakNet client has lost its connection to server at %s",
+						packet.systemAddress.ToString());
+				}
+				else if (role == Role::SERVER)
+				{
+					Logs::log(Category::INFO_LOG, "A client at %s has lost its connection to the RakNet server",
+						packet.systemAddress.ToString());
+				}
 				return;
 			}
 			else if (packetType == ID_CONNECTION_REQUEST_ACCEPTED)
@@ -137,7 +151,20 @@ namespace simplicity
 			}
 			else if (packetType == ID_NEW_INCOMING_CONNECTION)
 			{
+				systemIds[packet.systemAddress] =
+					RakNetGUID::ToUint32(peer->GetGuidFromSystemAddress(packet.systemAddress));
+
+				Message message(Subject::CLIENT_CONNECTED, nullptr);
+				message.senderSystemId = systemIds[packet.systemAddress];
+				Messages::send(message);
+
 				Logs::log(Category::INFO_LOG, "A client at %s has connected to the RakNet server",
+					packet.systemAddress.ToString());
+				return;
+			}
+			else if (packetType == ID_NO_FREE_INCOMING_CONNECTIONS)
+			{
+				Logs::log(Category::INFO_LOG, "RakNet client failed to connect to server at %s, it is full",
 					packet.systemAddress.ToString());
 				return;
 			}
@@ -152,8 +179,10 @@ namespace simplicity
 				return;
 			}
 
-			void* message = codec->decode(reinterpret_cast<byte*>(&packet.data[sizeof(unsigned short)]));
-			Messages::send(subject, message);
+			Message message = codec->decode(reinterpret_cast<byte*>(packet.data));
+			message.senderSystemId = systemIds[packet.systemAddress];
+
+			Messages::send(message);
 		}
 
 		void RakNetMessagingEngine::registerRecipient(unsigned short /* subject */,
@@ -166,33 +195,29 @@ namespace simplicity
 			recipients[subject].push_back(recipientCategory);
 		}
 
-		void RakNetMessagingEngine::send(unsigned short subject, const void* message)
+		void RakNetMessagingEngine::send(const Message& message)
 		{
-			auto subjectRecipients = recipients.find(subject);
+			auto subjectRecipients = recipients.find(message.subject);
 			if (subjectRecipients == recipients.end() || subjectRecipients->second.empty())
 			{
 				return;
 			}
 
-			Codec* codec = Messages::getCodec(subject);
+			Codec* codec = Messages::getCodec(message.subject);
 			if (codec == nullptr)
 			{
-				Logs::log(Category::ERROR_LOG, "Cannot send message: Codec not found for subject %i", subject);
+				Logs::log(Category::ERROR_LOG, "Cannot send message: Codec not found for subject %i", message.subject);
 				return;
 			}
 
 			vector<byte> encodedMessage = codec->encode(message);
-			vector<byte> encodedMessageWithSubject(sizeof(unsigned short));
-			memcpy(encodedMessageWithSubject.data(), &subject, sizeof(unsigned short));
-			encodedMessageWithSubject.insert(encodedMessageWithSubject.begin() + sizeof(unsigned short),
-				encodedMessage.begin(), encodedMessage.end());
 
 			for (unsigned short subjectRecipient : subjectRecipients->second)
 			{
 				if (subjectRecipient == RecipientCategory::CLIENT || subjectRecipient == RecipientCategory::SERVER)
 				{
-					peer->Send(encodedMessageWithSubject.data(), encodedMessageWithSubject.size(), HIGH_PRIORITY,
-						RELIABLE, 0, UNASSIGNED_RAKNET_GUID, true);
+					peer->Send(encodedMessage.data(), encodedMessage.size(), HIGH_PRIORITY, RELIABLE, 0,
+						UNASSIGNED_RAKNET_GUID, true);
 				}
 			}
 		}

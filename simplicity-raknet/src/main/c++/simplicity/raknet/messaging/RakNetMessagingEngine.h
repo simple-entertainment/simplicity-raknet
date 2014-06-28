@@ -51,7 +51,7 @@ namespace simplicity
 
 				void registerRecipient(unsigned short subject, unsigned short recipientCategory) override;
 
-				void send(unsigned short subject, const void* message) override;
+				void send(const Message& message) override;
 
 			private:
 				enum class Role
@@ -59,6 +59,8 @@ namespace simplicity
 					CLIENT,
 					SERVER
 				};
+
+				std::map<RakNet::SystemAddress, unsigned long> systemIds;
 
 				unsigned int maxConnections;
 

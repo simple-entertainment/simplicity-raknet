@@ -24,6 +24,6 @@ RelWithDebInfo
 
 # RakNet Source
 #########################
-simplicity-raknet/src/raknet/**/*.cpp
-simplicity-raknet/src/raknet/**/*.h
+simplicity-raknet/src/raknet/c++/*
+!simplicity-raknet/src/raknet/c++/README
 

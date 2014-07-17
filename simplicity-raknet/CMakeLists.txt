@@ -14,10 +14,3 @@ include_directories(src/raknet/c++)
 # Output
 add_library(simplicity-raknet STATIC ${SRC_FILES})
 
-IF(WIN32)
-	target_link_libraries(simplicity-raknet Ws2_32)
-ENDIF(WIN32)
-IF(UNIX)
-	target_link_libraries(simplicity-raknet pthread)
-ENDIF(UNIX)
-

@@ -15,15 +15,27 @@ RelWithDebInfo
 *.project
 *.settings
 
+# Make
+#########################
+Makefile
+
+# Misc
+#########################
+*~
+
+# Output
+#########################
+libsimplicity-raknet.a
+
+# RakNet Source
+#########################
+simplicity-raknet/src/raknet/c++/*
+!simplicity-raknet/src/raknet/c++/README
+
 # Visual Studio
 #########################
 *.filters
 *.sln
 *.user
 *.vcxproj
-
-# RakNet Source
-#########################
-simplicity-raknet/src/raknet/c++/*
-!simplicity-raknet/src/raknet/c++/README
 

@@ -21,6 +21,7 @@
 #include <simplicity/messaging/Subject.h>
 #include <simplicity/Simplicity.h>
 
+#include "BitStream.h"
 #include "RakNetMessagingEngine.h"
 
 using namespace RakNet;
@@ -30,6 +31,8 @@ namespace simplicity
 {
 	namespace raknet
 	{
+		MessageID SIMPLICITY_RAKNET_MESSAGE_ID = ID_USER_PACKET_ENUM + 1;
+
 		RakNetMessagingEngine::RakNetMessagingEngine(unsigned short listenPort, unsigned int maxConnections) :
 			maxConnections(maxConnections),
 			peer(nullptr),
@@ -104,6 +107,8 @@ namespace simplicity
 				peer->Connect(serverAddress.c_str(), port, nullptr, 0);
 			}
 
+			//peer->ApplyNetworkSimulator(0.0f, 50.0f, 0.0f);
+
 			Simplicity::setId(RakNetGUID::ToUint32(peer->GetGuidFromSystemAddress(UNASSIGNED_SYSTEM_ADDRESS)));
 		}
 
@@ -168,21 +173,23 @@ namespace simplicity
 					packet.systemAddress.ToString());
 				return;
 			}
-
-			unsigned short subject = 0;
-			memcpy(&subject, packet.data, sizeof(unsigned short));
-
-			Codec* codec = Messages::getCodec(subject);
-			if (codec == nullptr)
+			else if (packetType == SIMPLICITY_RAKNET_MESSAGE_ID)
 			{
-				Logs::log(Category::ERROR_LOG, "Cannot receive message: Codec not found for subject %i", subject);
-				return;
+				unsigned short subject = 0;
+				memcpy(&subject, &packet.data[1], sizeof(unsigned short));
+
+				Codec* codec = Messages::getCodec(subject);
+				if (codec == nullptr)
+				{
+					Logs::log(Category::ERROR_LOG, "Cannot receive message: Codec not found for subject %i", subject);
+					return;
+				}
+
+				Message message = codec->decode(reinterpret_cast<byte*>(&packet.data[1]));
+				message.senderSystemId = systemIds[packet.systemAddress];
+
+				Messages::send(message);
 			}
-
-			Message message = codec->decode(reinterpret_cast<byte*>(packet.data));
-			message.senderSystemId = systemIds[packet.systemAddress];
-
-			Messages::send(message);
 		}
 
 		void RakNetMessagingEngine::registerRecipient(unsigned short /* subject */,
@@ -211,12 +218,15 @@ namespace simplicity
 			}
 
 			vector<byte> encodedMessage = codec->encode(message);
+			BitStream bitStream;
+			bitStream.Write(SIMPLICITY_RAKNET_MESSAGE_ID);
+			bitStream.WriteAlignedBytes(reinterpret_cast<unsigned char*>(encodedMessage.data()), encodedMessage.size());
 
 			for (unsigned short subjectRecipient : subjectRecipients->second)
 			{
 				if (subjectRecipient == RecipientCategory::CLIENT || subjectRecipient == RecipientCategory::SERVER)
 				{
-					peer->Send(encodedMessage.data(), encodedMessage.size(), HIGH_PRIORITY, RELIABLE, 0,
+					peer->Send(&bitStream, HIGH_PRIORITY, RELIABLE, 0,
 						UNASSIGNED_RAKNET_GUID, true);
 				}
 			}

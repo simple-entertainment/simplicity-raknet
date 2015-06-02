@@ -29,8 +29,8 @@ libsimplicity-raknet.a
 
 # RakNet Source
 #########################
-simplicity-raknet/src/raknet/c++/*
-!simplicity-raknet/src/raknet/c++/README
+src/raknet/c++/*
+!src/raknet/c++/README
 
 # Visual Studio
 #########################

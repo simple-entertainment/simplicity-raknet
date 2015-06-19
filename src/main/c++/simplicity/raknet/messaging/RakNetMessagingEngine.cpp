@@ -96,14 +96,14 @@ namespace simplicity
 				peer->Startup(maxConnections, &socketDescriptor, 1);
 				peer->SetMaximumIncomingConnections(static_cast<unsigned short>(maxConnections));
 
-				Logs::log(Category::INFO_LOG, "RakNet server listening on port %i", port);
+				Logs::info("simplicity::raknet", "RakNet server listening on port %i", port);
 			}
 			else
 			{
 				SocketDescriptor socketDescriptor;
 				peer->Startup(1, &socketDescriptor, 1);
 
-				Logs::log(Category::INFO_LOG, "RakNet client connecting to server at %s|%i", serverAddress.c_str(), port);
+				Logs::info("simplicity::raknet", "RakNet client connecting to server at %s|%i", serverAddress.c_str(), port);
 				peer->Connect(serverAddress.c_str(), port, nullptr, 0);
 			}
 
@@ -138,19 +138,19 @@ namespace simplicity
 			{
 				if (role == Role::CLIENT)
 				{
-					Logs::log(Category::INFO_LOG, "RakNet client has lost its connection to server at %s",
+					Logs::info("simplicity::raknet", "RakNet client has lost its connection to server at %s",
 						packet.systemAddress.ToString());
 				}
 				else if (role == Role::SERVER)
 				{
-					Logs::log(Category::INFO_LOG, "A client at %s has lost its connection to the RakNet server",
+					Logs::info("simplicity::raknet", "A client at %s has lost its connection to the RakNet server",
 						packet.systemAddress.ToString());
 				}
 				return;
 			}
 			else if (packetType == ID_CONNECTION_REQUEST_ACCEPTED)
 			{
-				Logs::log(Category::INFO_LOG, "RakNet client connected to server at %s",
+				Logs::info("simplicity::raknet", "RakNet client connected to server at %s",
 					packet.systemAddress.ToString());
 				return;
 			}
@@ -163,13 +163,13 @@ namespace simplicity
 				message.senderSystemId = systemIds[packet.systemAddress];
 				Messages::send(message);
 
-				Logs::log(Category::INFO_LOG, "A client at %s has connected to the RakNet server",
+				Logs::info("simplicity::raknet", "A client at %s has connected to the RakNet server",
 					packet.systemAddress.ToString());
 				return;
 			}
 			else if (packetType == ID_NO_FREE_INCOMING_CONNECTIONS)
 			{
-				Logs::log(Category::INFO_LOG, "RakNet client failed to connect to server at %s, it is full",
+				Logs::info("simplicity::raknet", "RakNet client failed to connect to server at %s, it is full",
 					packet.systemAddress.ToString());
 				return;
 			}
@@ -181,7 +181,7 @@ namespace simplicity
 				Codec* codec = Messages::getCodec(subject);
 				if (codec == nullptr)
 				{
-					Logs::log(Category::ERROR_LOG, "Cannot receive message: Codec not found for subject %i", subject);
+					Logs::error("simplicity::raknet", "Cannot receive message: Codec not found for subject %i", subject);
 					return;
 				}
 
@@ -213,7 +213,7 @@ namespace simplicity
 			Codec* codec = Messages::getCodec(message.subject);
 			if (codec == nullptr)
 			{
-				Logs::log(Category::ERROR_LOG, "Cannot send message: Codec not found for subject %i", message.subject);
+				Logs::error("simplicity::raknet", "Cannot send message: Codec not found for subject %i", message.subject);
 				return;
 			}
 

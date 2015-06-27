@@ -1,8 +1,0 @@
-You'll have to get your own copy of the RakNet source code as the license I used (the Independent Developer License Agreement found at http://www.jenkinssoftware.com/Legal/RakNet_Indy_License_1.03_14FEB2011.pdf) does not allow for redistribution of the source code.
-
-Go here to get a free* copy of the source code: http://www.jenkinssoftware.com/hobbyist.html
-
-*Read the terms and conditions.
-
-Once you've got it you can copy the contents of the Source folder here (CMakeLists.txt and the *.vcproj files not required)!
-

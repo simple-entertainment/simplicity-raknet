@@ -1,0 +1,3 @@
+[submodule "lib/RakNet"]
+	path = lib/RakNet
+	url = git@github.com:OculusVR/RakNet.git

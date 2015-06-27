@@ -6,9 +6,15 @@ include(../simplicity/simplicity-common.cmake)
 #########################
 project(simplicity-raknet)
 
+# Project Dependencies
+#########################
+
+# RakNet
+add_subdirectory(lib/RakNet)
+
 # Source
 #########################
-file(GLOB_RECURSE SRC_FILES src/main/c++/*.cpp src/main/c++/*.h src/raknet/c++/*.cpp src/raknet/c++/*.h)
+file(GLOB_RECURSE SRC_FILES src/main/c++/*.cpp src/main/c++/*.h)
 
 # Target
 #########################
@@ -19,17 +25,8 @@ target_include_directories(simplicity-raknet PUBLIC src/main/c++)
 #########################
 
 # RakNet
-target_include_directories(simplicity-raknet PUBLIC src/raknet/c++)
-
-# Ws2
-IF(WIN32)
-	target_link_libraries(simplicity-raknet Ws2_32)
-ENDIF(WIN32)
-
-# pthread
-IF(UNIX)
-	target_link_libraries(simplicity-raknet pthread)
-ENDIF(UNIX)
+target_include_directories(simplicity-raknet PUBLIC lib/RakNet/Source)
+target_link_libraries(simplicity-raknet RakNetLibStatic)
 
 # Simplicity
 target_link_libraries(simplicity-raknet simplicity)
